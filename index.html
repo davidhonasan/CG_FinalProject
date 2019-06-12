@@ -1,0 +1,157 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CG Final Project</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
+    <script type="application/vertexShader" id="vertexShaderCode">
+        #ifdef GL_ES
+            precision highp float;
+        #endif
+    
+        // Attributes
+        attribute vec3 position;
+        attribute vec2 uv;
+    
+        // Uniforms
+        uniform mat4 worldViewProjection;
+    
+        // Normal
+        varying vec2 vUV;
+    
+        void main(void) {
+        gl_Position = worldViewProjection * vec4(position, 1.0);
+    
+        vUV = uv;
+        }
+    </script>
+    <script type="application/fragmentShader" id="fragmentShaderCode">
+        #ifdef GL_ES
+            precision mediump float;
+        #endif
+    
+        varying vec2 vUV;
+    
+        uniform sampler2D textureSampler;
+    
+        void main(void) {
+            gl_FragColor = texture2D(textureSampler, vUV);
+        }
+    </script>
+    <style>
+    html, body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    #render {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+    }
+    </style>
+</head>
+<body>
+    <canvas id="render" touch-action="none">
+    <script>
+        var canvas = document.getElementById("render");
+        var engine = new BABYLON.Engine(canvas, true);
+        var scene = new BABYLON.Scene(engine);
+    
+        // Light
+        var light = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 1000, 0), scene);
+        light.intensity = 0.5;
+
+        // Shader
+        var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
+            vertexElement: "vertexShaderCode",
+            fragmentElement: "fragmentShaderCode",
+            },
+            {
+            attributes: ["position", "normal", "uv"],
+            uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
+        });
+
+        // Make the sky
+        var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:10000.0}, scene);
+        var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("skybox/skybox", scene);
+        skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+        skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        skybox.material = skyboxMaterial;
+                
+        var mainTexture = new BABYLON.Texture("sample.jpg", scene);
+        shaderMaterial.setTexture("textureSampler", mainTexture);
+
+        // Assets
+        var assetsManager = new BABYLON.AssetsManager(scene);
+        var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
+        var car = assetsManager.addMeshTask("Car", "", "car/", "copy-of-lamborghini-aventador.obj");
+
+        // Camera
+        var camera = new BABYLON.UniversalCamera("Camera", new BABYLON.Vector3(0, 61, 0), scene);
+        camera.rotation.y = -1.2;
+        camera.radius = 30;
+        // camera.lockedTarget = car;
+        camera.attachControl(canvas);
+
+        // Collision
+        scene.collisionsEnabled = true;
+        scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
+        // camera.checkCollisions = true;
+        // camera.applyGravity = true;        
+
+        // City
+        city.onSuccess = function (task) {
+            for (var i = 0; i < task.loadedMeshes.length; i++){
+                task.loadedMeshes[i].position = BABYLON.Vector3.Zero();
+                task.loadedMeshes[i].checkCollisions = true;
+            }
+        }
+
+        // Car
+        car.onSuccess = function (task) {
+            for (var i = 0; i < task.loadedMeshes.length; i++){
+                task.loadedMeshes[i].position = new BABYLON.Vector3(0, 50, 0);
+                task.loadedMeshes[i].scaling = new BABYLON.Vector3(10, 10, 10);
+                task.loadedMeshes[i].checkCollisions = true;
+                task.loadedMeshes[i].applyGravity = true;
+            }
+        }
+
+        assetsManager.onFinish = function(tasks) {
+            engine.runRenderLoop(function() {
+                scene.actionManager = new BABYLON.ActionManager(scene);
+                scene.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        {
+                            trigger: BABYLON.ActionManager.OnKeyDownTrigger,
+                            parameter: 'w'
+                        },
+                        function () {
+                            for (var i = 0; i < car.loadedMeshes.length; i++){
+                                car.loadedMeshes[i].position.x += 1;
+                            }
+                        }
+                    )
+                );
+                scene.render();
+            });
+        };
+        assetsManager.load();
+        
+        window.addEventListener("resize", function() {
+            engine.resize();
+        });
+    </script>
+    </canvas>
+</body>
+</html>
+  
+  

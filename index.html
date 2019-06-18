@@ -5,6 +5,7 @@
     <title>CG Final Project</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
     <script type="application/vertexShader" id="vertexShaderCode">
         #ifdef GL_ES
@@ -61,10 +62,6 @@
         var canvas = document.getElementById("render");
         var engine = new BABYLON.Engine(canvas, true);
         var scene = new BABYLON.Scene(engine);
-    
-        // Light
-        var light = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 1000, 0), scene);
-        light.intensity = 0.5;
 
         // Shader
         var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
@@ -90,10 +87,12 @@
         shaderMaterial.setTexture("textureSampler", mainTexture);
 
         // Camera
-        var camera = new BABYLON.UniversalCamera("Camera", new BABYLON.Vector3(0, 61, 0), scene);
-        camera.rotation.y = -1.2;
+        var camera = new BABYLON.UniversalCamera("HumanCamera", new BABYLON.Vector3(0, 53, 0), scene);
+        camera.rotation.y = Math.PI;
         camera.radius = 30;
         camera.attachControl(canvas);
+        camera.ellipsoid = new BABYLON.Vector3(10, 7, 10);
+
         // Remap keys to move with WASD
         camera.keysUp = [87]; // W
         camera.keysDown = [83]; // S
@@ -106,11 +105,20 @@
         camera.checkCollisions = true;
         camera.applyGravity = true;
 
+        // Light
+        var sunlight = new BABYLON.HemisphericLight("Sun", new BABYLON.Vector3(0, 100, 0), scene);
+        var light = new BABYLON.SpotLight("Flashlight", new BABYLON.Vector3(0, 5, -5), new BABYLON.Vector3(0, -0.15, 1), 10, 7, scene);
+        light.range = 175;
+        light.parent = camera;
+        sunlight.intensity = 0.15;
+
         // Assets
+        var assets = {};
         var assetsManager = new BABYLON.AssetsManager(scene);
         var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
-        var track = assetsManager.addMeshTask("Track", "", "railroad track/", "railroad track.obj");
-
+        var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/OBJ/", "FireAxe.obj");
+        var ghost = assetsManager.addMeshTask("Ghost", "", "ghost/", "nintendoghost.glb")
+        
         // City
         city.onSuccess = function (task) {
             for (var i = 0; i < task.loadedMeshes.length; i++){
@@ -119,11 +127,86 @@
             }
         }
 
-        track.onSuccess = function (task) {
+        // Axe
+        axe.onSuccess = function (task) {
             for (var i = 0; i < task.loadedMeshes.length; i++){
-                task.loadedMeshes[i].position = new BABYLON.Vector3(0, 50, 0);
+                task.loadedMeshes[i].parent = camera;
+                task.loadedMeshes[i].position = new BABYLON.Vector3(-0.5, -9.5, 15);
+                task.loadedMeshes[i].rotation = new BABYLON.Vector3(-3.28, 0, -2.61);
+                task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.4, 0.4, 0.4); 
+                task.loadedMeshes[i].checkCollisions = true;
             }
         }
+
+        ghost.onSuccess = function (task) {
+            for (var i = 0; i < task.loadedMeshes.length; i++){
+                task.loadedMeshes[i].position = new BABYLON.Vector3(0,40,100);
+                task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                task.loadedMeshes[i].checkCollisions = true;
+            }
+        }
+
+        // action manager
+        scene.actionManager = new BABYLON.ActionManager(scene);
+
+        // Pointer LOCK
+        //We start without being locked.
+        var isLocked = false;
+            
+        // On click event, request pointer lock
+        scene.onPointerDown = function (evt) {
+            //true/false check if we're locked, faster than checking pointerlock on each single click.
+            if (!isLocked) {
+                canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
+                if (canvas.requestPointerLock) {
+                    canvas.requestPointerLock();
+                }
+            }
+            // LEFT CLICK
+            if (isLocked && evt.buttons === 1) {
+                console.log('hit');
+                
+                scene.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        {
+                            trigger: BABYLON.ActionManager.OnPickTrigger, 
+                            parameter: { 
+                                mesh: ghost
+                            }
+                        }, 
+                        function () {
+                            console.log('asd');
+                            ghost.loadedMeshes[0].dispose();
+                        }
+                    )
+                );
+                console.log('asd');
+            }
+        };
+
+        // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
+        var pointerlockchange = function () {
+            var controlEnabled = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || document.msPointerLockElement || false;
+            
+            // If the user is already locked
+            if (!controlEnabled) {
+                camera.detachControl(canvas);
+                isLocked = false;
+            } else {
+                camera.attachControl(canvas);
+                isLocked = true;
+            }
+        };
+
+        // Attach events to the document
+        document.addEventListener("pointerlockchange", pointerlockchange, false);
+        document.addEventListener("mspointerlockchange", pointerlockchange, false);
+        document.addEventListener("mozpointerlockchange", pointerlockchange, false);
+        document.addEventListener("webkitpointerlockchange", pointerlockchange, false);
+        // END OF POINTER LOCK
+
+        // UI
+        // var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
 
         assetsManager.onFinish = function(tasks) {
             engine.runRenderLoop(function() {
@@ -132,6 +215,8 @@
         };
         assetsManager.load();
         
+        scene.debugLayer.show();
+
         window.addEventListener("resize", function() {
             engine.resize();
         });

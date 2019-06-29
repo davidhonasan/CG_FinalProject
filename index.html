@@ -6,6 +6,7 @@
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://cdn.babylonjs.com/ammo.js"></script>
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
     <script type="application/vertexShader" id="vertexShaderCode">
         #ifdef GL_ES
@@ -54,14 +55,27 @@
         height: 100%;
         touch-action: none;
     }
+    #crosshair {
+        position:absolute;
+        top:50%;
+        left:50%;
+        margin-top:-37px;
+        margin-left:-37px;
+        width: 3%;
+        opacity: 0.5
+    }
     </style>
 </head>
 <body>
+    <img id="crosshair" src="crosshair.png"/>
     <canvas id="render" touch-action="none">
     <script>
         var canvas = document.getElementById("render");
         var engine = new BABYLON.Engine(canvas, true);
         var scene = new BABYLON.Scene(engine);
+        var gravityVector = new BABYLON.Vector3(0,-9.81, 0);
+        var physicsPlugin = new BABYLON.AmmoJSPlugin();
+        scene.enablePhysics(gravityVector, physicsPlugin);
 
         // Shader
         var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
@@ -88,10 +102,10 @@
 
         // Camera
         var camera = new BABYLON.UniversalCamera("HumanCamera", new BABYLON.Vector3(0, 53, 0), scene);
-        camera.rotation.y = Math.PI;
+        // camera.rotation.y = Math.PI;
         camera.radius = 30;
         camera.attachControl(canvas);
-        camera.ellipsoid = new BABYLON.Vector3(10, 7, 10);
+        camera.ellipsoid = new BABYLON.Vector3(4, 7, 4);
 
         // Remap keys to move with WASD
         camera.keysUp = [87]; // W
@@ -112,6 +126,38 @@
         light.parent = camera;
         sunlight.intensity = 0.15;
 
+        // // Minimap
+        
+        // var mm = new BABYLON.FreeCamera("minimap", new BABYLON.Vector3(0,100,0), scene);
+        // mm.setTarget(new BABYLON.Vector3(0.1,0.1,0.1));
+        // // Activate the orthographic projection
+        // mm.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+
+        // //These values are required for using an orthographic mode,
+        // // and represents the coordinates of the square containing all the camera view.
+        // // this.size is the size of our arena
+        // mm.orthoLeft = -this.size/2;
+        // mm.orthoRight = this.size/2;
+        // mm.orthoTop =  this.size/2;
+        // mm.orthoBottom = -this.size/2;
+
+        // mm.rotation.x = Math.PI/2;
+
+        // var xstart = 0.8, // 80% from the left
+        //     ystart = 0.75; // 75% from the bottom
+        // var width = 0.99-xstart, // Almost until the right edge of the screen
+        //     height = 1-ystart;  // Until the top edge of the screen
+
+        // mm.viewport = new BABYLON.Viewport(
+        //     xstart,
+        //     ystart,
+        //     width,
+        //     height
+        //     );
+
+        // // Add the camera to the list of active cameras of the game
+        // scene.activeCameras.push(mm);
+
         // Assets
         var assets = {};
         var assetsManager = new BABYLON.AssetsManager(scene);
@@ -124,6 +170,7 @@
             for (var i = 0; i < task.loadedMeshes.length; i++){
                 task.loadedMeshes[i].position = BABYLON.Vector3.Zero();
                 task.loadedMeshes[i].checkCollisions = true;
+                // task.loadedMeshes[i].PhysicsImpostor(BABYLON.PhysicsEngine.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 });
             }
         }
 
@@ -142,7 +189,8 @@
             for (var i = 0; i < task.loadedMeshes.length; i++){
                 task.loadedMeshes[i].position = new BABYLON.Vector3(0,40,100);
                 task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-                task.loadedMeshes[i].checkCollisions = true;
+                // task.loadedMeshes[i].checkCollisions = true;
+                // task.loadedMeshes[i].setPhysicsState(BABYLON.PhysicsEngine.SphereImpostor, { mass: 1, friction: 0.5, restitution: 0.7 });
             }
         }
 
@@ -152,7 +200,7 @@
         // Pointer LOCK
         //We start without being locked.
         var isLocked = false;
-            
+        var score = 0;
         // On click event, request pointer lock
         scene.onPointerDown = function (evt) {
             //true/false check if we're locked, faster than checking pointerlock on each single click.
@@ -164,23 +212,13 @@
             }
             // LEFT CLICK
             if (isLocked && evt.buttons === 1) {
-                console.log('hit');
-                
-                scene.actionManager.registerAction(
-                    new BABYLON.ExecuteCodeAction(
-                        {
-                            trigger: BABYLON.ActionManager.OnPickTrigger, 
-                            parameter: { 
-                                mesh: ghost
-                            }
-                        }, 
-                        function () {
-                            console.log('asd');
-                            ghost.loadedMeshes[0].dispose();
-                        }
-                    )
-                );
-                console.log('asd');
+                if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
+                    // console.log('yes');
+                    ghost.loadedMeshes[1].dispose();
+                    score++;
+                // }else{
+                    // console.log('no');
+                }
             }
         };
 
@@ -206,8 +244,25 @@
         // END OF POINTER LOCK
 
         // UI
-        // var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
+        var gameUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
 
+        var score_text = new BABYLON.GUI.TextBlock('Score');
+        // score_text.text = "Score: " + score;
+        score_text.color = "green";
+        score_text.left = "-43%";
+        score_text.top = "-48%";
+        score_text.fontSize = 32;
+        gameUI.addControl(score_text);  
+
+        // registerbeforerender        
+        scene.registerBeforeRender(function() {
+            if(ghost.loadedMeshes[0].getDistanceToCamera() >= 25){
+                ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y - 12, camera.position.z));
+                ghost.loadedMeshes[0].movePOV(0, 0, -0.5);
+            }
+            score_text.text = "Score: " + score;
+            
+        })
         assetsManager.onFinish = function(tasks) {
             engine.runRenderLoop(function() {
                 scene.render();

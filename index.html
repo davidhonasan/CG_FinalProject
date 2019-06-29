@@ -104,6 +104,7 @@
         var camera = new BABYLON.UniversalCamera("HumanCamera", new BABYLON.Vector3(0, 53, 0), scene);
         // camera.rotation.y = Math.PI;
         camera.radius = 30;
+        camera.speed = 3;
         camera.attachControl(canvas);
         camera.ellipsoid = new BABYLON.Vector3(4, 7, 4);
 
@@ -158,12 +159,21 @@
         // // Add the camera to the list of active cameras of the game
         // scene.activeCameras.push(mm);
 
+        // Random position
+        function rPos(){
+            return (Math.random() * 400) - 200;
+        }
+
+        for(var i = 0; i < 5; i++){
+            console.log(rPos());
+        };
+
         // Assets
         var assets = {};
         var assetsManager = new BABYLON.AssetsManager(scene);
         var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
         var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/OBJ/", "FireAxe.obj");
-        var ghost = assetsManager.addMeshTask("Ghost", "", "ghost/", "nintendoghost.glb")
+        var ghost = assetsManager.addMeshTask("ghost0", "", "ghost/", "nintendoghost.glb")
         
         // City
         city.onSuccess = function (task) {
@@ -184,13 +194,15 @@
                 task.loadedMeshes[i].checkCollisions = true;
             }
         }
-
+        
         ghost.onSuccess = function (task) {
+            var ran = rPos();
+            var ran2 = rPos();
+            
             for (var i = 0; i < task.loadedMeshes.length; i++){
-                task.loadedMeshes[i].position = new BABYLON.Vector3(0,40,100);
+                task.loadedMeshes[i].position = new BABYLON.Vector3(camera.position.x + ran, 45, camera.position.z + ran2);
                 task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
                 // task.loadedMeshes[i].checkCollisions = true;
-                // task.loadedMeshes[i].setPhysicsState(BABYLON.PhysicsEngine.SphereImpostor, { mass: 1, friction: 0.5, restitution: 0.7 });
             }
         }
 
@@ -214,7 +226,10 @@
             if (isLocked && evt.buttons === 1) {
                 if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
                     // console.log('yes');
-                    ghost.loadedMeshes[1].dispose();
+                    // ghost.loadedMeshes[0].dispose();
+                    var ran3 = rPos();
+                    var ran4 = rPos();
+                    ghost.loadedMeshes[0].position =  new BABYLON.Vector3(camera.position.x + ran3, 45, camera.position.z + ran4);
                     score++;
                 // }else{
                     // console.log('no');
@@ -256,12 +271,16 @@
 
         // registerbeforerender        
         scene.registerBeforeRender(function() {
-            if(ghost.loadedMeshes[0].getDistanceToCamera() >= 25){
-                ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y - 12, camera.position.z));
-                ghost.loadedMeshes[0].movePOV(0, 0, -0.5);
+            if(ghost.loadedMeshes[0].getDistanceToCamera() >=25){
+                ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-10, camera.position.z));
+                ghost.loadedMeshes[0].movePOV(0, 0, -1);
             }
             score_text.text = "Score: " + score;
-            
+            // if(score % 5 == 0){
+            //     for(i;i <= 5;i++){
+            //         ghost.loadedMeshes[0].clone('ghost'+i);
+            //     }
+            // }                
         })
         assetsManager.onFinish = function(tasks) {
             engine.runRenderLoop(function() {

@@ -61,8 +61,9 @@
         left:50%;
         margin-top:-37px;
         margin-left:-37px;
-        width: 3%;
-        opacity: 0.5
+        width: 2%;
+        opacity: 0.4;
+        visibility: hidden;
     }
     </style>
 </head>
@@ -74,6 +75,38 @@
         var engine = new BABYLON.Engine(canvas, true);
 
         var createScene = function() {
+            // MENU
+            var menuscene = new BABYLON.Scene(engine);
+
+            var camera1 = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), menuscene);
+            camera1.attachControl(canvas, true);
+
+            var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 0.5, 0), menuscene);
+            light.intensity = 0.8;
+
+            // UI
+            var menuUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("menuUI");
+            var play = BABYLON.GUI.Button.CreateSimpleButton("Play Button", "Play");
+            play.width = 0.2;
+            play.height = 0.1;
+            play.color = "white";
+            play.fontSize = 40;
+            play.fontFamily = "Verdana";
+            play.background = "red";
+            play.onPointerUpObservable.add(function() {
+                engine.stopRenderLoop();
+                engine.runRenderLoop(function () {
+                    scene.render();
+                })
+            });
+            menuUI.addControl(play);
+
+            engine.runRenderLoop(function () {
+                menuscene.render();
+            })
+
+
+            // GAME
             var scene = new BABYLON.Scene(engine);
             var gravityVector = new BABYLON.Vector3(0,-9.81, 0);
             var physicsPlugin = new BABYLON.AmmoJSPlugin();
@@ -98,7 +131,8 @@
             skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
             skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
             skybox.material = skyboxMaterial;
-                    
+      
+            // Texture
             var mainTexture = new BABYLON.Texture("sample.jpg", scene);
             shaderMaterial.setTexture("textureSampler", mainTexture);
 
@@ -118,7 +152,7 @@
 
             // Collision
             scene.collisionsEnabled = true;
-            scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
+            scene.gravity = new BABYLON.Vector3(0, -2.981, 0);
             camera.checkCollisions = true;
             camera.applyGravity = true;
 
@@ -166,8 +200,8 @@
             sunlight.intensity = 0.15;
 
             // Random position
-            function rPos(){
-                return (Math.random() * 400) - 200;
+            function rPos(pos = 0){
+                return (Math.random() * 1000) - 500 + pos;
             }
             
 
@@ -185,7 +219,14 @@
                     // task.loadedMeshes[i].PhysicsImpostor(BABYLON.PhysicsEngine.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 });
                 }
             }
+                          
+            // Make Fog
+            scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
 
+            scene.fogColor = new BABYLON.Color3(0.25, 0.25, 0.3);
+            // scene.fogStart = 30.0;
+            // scene.fogEnd = 2000.0;
+            scene.fogDensity = 0.0025;
             // Axe
             axe.onSuccess = function (task) {
                 for (var i = 0; i < task.loadedMeshes.length; i++){
@@ -198,10 +239,10 @@
             }
             
             ghost.onSuccess = function (task) {
-                var ran = rPos();
-                var ran2 = rPos();
+                var ran = rPos(camera.position.x);
+                var ran2 = rPos(camera.position.z);
                 for (var i = 0; i < task.loadedMeshes.length; i++){
-                    task.loadedMeshes[i].position = new BABYLON.Vector3(camera.position.x + ran, 45, camera.position.z + ran2);
+                    task.loadedMeshes[i].position = new BABYLON.Vector3(ran, 45, ran2);
                     task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
                     // task.loadedMeshes[i].checkCollisions = true;
                 }
@@ -218,13 +259,14 @@
             var health = 100;
 
             function randomGhost(posx, posz){
-                ghost.loadedMeshes[0].position =  new BABYLON.Vector3(camera.position.x + posx, 45, camera.position.z + posz);
+                ghost.loadedMeshes[0].position =  new BABYLON.Vector3(posx, 45, posz);
             }
 
             // On click event, request pointer lock
             scene.onPointerDown = function (evt) {
                 //true/false check if we're locked, faster than checking pointerlock on each single click.
                 if (!isLocked) {
+                        document.getElementById('crosshair').style.visibility = 'visible';
                     canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
                     if (canvas.requestPointerLock) {
                         canvas.requestPointerLock();
@@ -232,10 +274,26 @@
                 }
                 // LEFT CLICK
                 if (isLocked && evt.buttons === 1) {
+                    axe.loadedMeshes[0].rotate(BABYLON.Axis.Z, -1);
+                    axe.loadedMeshes[1].rotate(BABYLON.Axis.Z, -1);
+                    axe.loadedMeshes[2].rotate(BABYLON.Axis.Z, -1);
                     if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
                         randomGhost(rPos(), rPos());
                         score++;
                     }
+                    function goback(){
+                        if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
+                        randomGhost(rPos(), rPos());
+                        score++;
+                    }
+                        axe.loadedMeshes[0].rotate(BABYLON.Axis.Z, 0.25);
+                        axe.loadedMeshes[1].rotate(BABYLON.Axis.Z, 0.25);
+                        axe.loadedMeshes[2].rotate(BABYLON.Axis.Z, 0.25);
+                    }
+                    setTimeout(goback, 500);
+                    setTimeout(goback, 400);
+                    setTimeout(goback, 300);
+                    setTimeout(goback, 200);
                 }
             };
 
@@ -279,26 +337,53 @@
             health_text.fontSize = 32;
             gameUI.addControl(health_text);  
 
+            // Checkpoint
+            var cp_box = new BABYLON.MeshBuilder.CreateBox("CheckpointBox", {height: 10, width: 50, depth: 50}, scene);
+            cp_box.material = shaderMaterial;
+            moveCpBox();
+            function moveCpBox() {
+                cp_box.position = new BABYLON.Vector3(-101,50,-1005);
+            }
+
             // registerbeforerender        
             scene.registerBeforeRender(function() {
                 // make map move with player
-                mm.position = camera.position;
+                mm.position.x = camera.position.x;
+                mm.position.z = camera.position.z;
 
-                // console.log(ghost.loadedMeshes[0].getDistanceToCamera(camera));
+                cp_box.rotation.y -= 0.01;
+
+                // if(new Date().getSeconds() == 0 ){
+                //     console.log('asdasd');
+                //     moveCpBox();
+                // }
+
+                if(axe.loadedMeshes[0].intersectsMesh(cp_box, true)){
+                    moveCpBox();
+                    score += 10;
+                }
+
                 // follow ghost to player
-                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=20){
-                    ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-10, camera.position.z));
-                    ghost.loadedMeshes[0].movePOV(0, 0, -1);
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=10){
+                    ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-5, camera.position.z));
+                    ghost.loadedMeshes[0].movePOV(0, 0, -1.5);
                 }
 
                 // if player hit then relocate ghost
-                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <=15){
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <=10){
                     randomGhost(rPos(), rPos());
                     health -= 10;
                 }
 
-                if(health == 0){
-
+                if(health == 0 || camera.position.y <= 0){
+                    alert("Game Over\nScore: "+score);
+                    camera.position = new BABYLON.Vector3(0,53,0);
+                    score = 0;
+                    health = 100;
+                    engine.stopRenderLoop();
+                    engine.runRenderLoop(function(){
+                        menuscene.render();
+                    });
                 }
 
                 // UI update
@@ -307,9 +392,10 @@
                 
             })
             assetsManager.onFinish = function(tasks) {
-                engine.runRenderLoop(function() {
-                    scene.render();
-                });
+                // engine.runRenderLoop(function() {
+                //     document.getElementById('crosshair').style.visibility = 'visible';
+                //     scene.render();
+                // });                
             };
             assetsManager.load();
 
@@ -320,7 +406,10 @@
 
         // DEBUG MODE
         scene.debugLayer.show();
+        //-524,55,-36
+        //-56,55,-1440
         
+
         window.addEventListener("resize", function() {
             engine.resize();
         });

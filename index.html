@@ -72,225 +72,262 @@
     <script>
         var canvas = document.getElementById("render");
         var engine = new BABYLON.Engine(canvas, true);
-        var scene = new BABYLON.Scene(engine);
-        var gravityVector = new BABYLON.Vector3(0,-9.81, 0);
-        var physicsPlugin = new BABYLON.AmmoJSPlugin();
-        scene.enablePhysics(gravityVector, physicsPlugin);
+        var createScene = function() {
+            var scene = new BABYLON.Scene(engine);
+            var gravityVector = new BABYLON.Vector3(0,-9.81, 0);
+            var physicsPlugin = new BABYLON.AmmoJSPlugin();
+            scene.enablePhysics(gravityVector, physicsPlugin);
 
-        // Shader
-        var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
-            vertexElement: "vertexShaderCode",
-            fragmentElement: "fragmentShaderCode",
-            },
-            {
-            attributes: ["position", "normal", "uv"],
-            uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
+            // Shader
+            var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
+                vertexElement: "vertexShaderCode",
+                fragmentElement: "fragmentShaderCode",
+                },
+                {
+                attributes: ["position", "normal", "uv"],
+                uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"]
+            });
+
+            // Make the sky
+            var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:10000.0}, scene);
+            var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+            skyboxMaterial.backFaceCulling = false;
+            skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("skybox/skybox", scene);
+            skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+            skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            skybox.material = skyboxMaterial;
+                    
+            var mainTexture = new BABYLON.Texture("sample.jpg", scene);
+            shaderMaterial.setTexture("textureSampler", mainTexture);
+
+            // Camera
+            var camera = new BABYLON.UniversalCamera("HumanCamera", new BABYLON.Vector3(0, 53, 0), scene);
+            // camera.rotation.y = Math.PI;
+            camera.radius = 30;
+            camera.speed = 3;
+            camera.attachControl(canvas);
+            camera.ellipsoid = new BABYLON.Vector3(4, 7, 4);
+
+            // Remap keys to move with WASD
+            camera.keysUp = [87]; // W
+            camera.keysDown = [83]; // S
+            camera.keysLeft = [65]; // A
+            camera.keysRight = [68]; // D
+
+            // Collision
+            scene.collisionsEnabled = true;
+            scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
+            camera.checkCollisions = true;
+            camera.applyGravity = true;
+
+            // Minimap
+            
+            var mm = new BABYLON.FreeCamera("minimap", new BABYLON.Vector3(0,100,0), scene);
+            mm.setTarget(new BABYLON.Vector3(0.1,0.1,0.1));
+            // Activate the orthographic projection
+            mm.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+
+            //These values are required for using an orthographic mode,
+            // and represents the coordinates of the square containing all the camera view.
+            // this.size is the size of our arena
+            mm.orthoLeft = -this.size/2;
+            mm.orthoRight = this.size/2;
+            mm.orthoTop =  this.size/2;
+            mm.orthoBottom = -this.size/2;
+
+            mm.rotation.x = Math.PI/2;
+
+            var xstart = 0.8, // 80% from the left
+                ystart = 0.75; // 75% from the bottom
+            var width = 0.99-xstart, // Almost until the right edge of the screen
+                height = 1-ystart;  // Until the top edge of the screen
+
+            mm.viewport = new BABYLON.Viewport(
+                xstart,
+                ystart,
+                width,
+                height
+                );
+
+            // Add the camera to the list of active cameras of the game
+            scene.activeCameras.push(camera);
+            scene.activeCameras.push(mm);
+
+            // Layer Mask
+            camera.layerMask = 1;
+            mm.layerMask = 2;
+            
+
+            // Light
+            var sunlight = new BABYLON.HemisphericLight("Sun", new BABYLON.Vector3(0, 100, 0), scene);
+            var light = new BABYLON.SpotLight("Flashlight", new BABYLON.Vector3(0, 5, -5), new BABYLON.Vector3(0, -0.15, 1), 10, 7, scene);
+            light.range = 175;
+            light.parent = camera;
+            sunlight.intensity = 0.15;
+
+            // Random position
+            function rPos(){
+                return (Math.random() * 400) - 200;
+            }
+            
+
+            // Assets
+            var assets = {};
+            var assetsManager = new BABYLON.AssetsManager(scene);
+            var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
+            var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/OBJ/", "FireAxe.obj");
+            var ghost = assetsManager.addMeshTask("ghost0", "", "ghost/", "nintendoghost.glb")
+            
+            // City
+            city.onSuccess = function (task) {
+                for (var i = 0; i < task.loadedMeshes.length; i++){
+                    task.loadedMeshes[i].position = BABYLON.Vector3.Zero();
+                    task.loadedMeshes[i].checkCollisions = true;
+                    // task.loadedMeshes[i].PhysicsImpostor(BABYLON.PhysicsEngine.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 });
+                }
+            }
+
+            // Axe
+            axe.onSuccess = function (task) {
+                for (var i = 0; i < task.loadedMeshes.length; i++){
+                    task.loadedMeshes[i].parent = camera;
+                    task.loadedMeshes[i].position = new BABYLON.Vector3(-0.5, -9.5, 15);
+                    task.loadedMeshes[i].rotation = new BABYLON.Vector3(-3.28, 0, -2.61);
+                    task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.4, 0.4, 0.4); 
+                    task.loadedMeshes[i].checkCollisions = true;
+                }
+            }
+            
+            ghost.onSuccess = function (task) {
+                var ran = rPos();
+                var ran2 = rPos();
+                for (var i = 0; i < task.loadedMeshes.length; i++){
+                    task.loadedMeshes[i].position = new BABYLON.Vector3(camera.position.x + ran, 45, camera.position.z + ran2);
+                    task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                    // task.loadedMeshes[i].checkCollisions = true;
+                }
+            }
+
+            
+            // action manager
+            scene.actionManager = new BABYLON.ActionManager(scene);
+
+            // Pointer LOCK
+            //We start without being locked.
+            var isLocked = false;
+            var score = 0;
+            var health = 100;
+
+            function randomGhost(posx, posz){
+                ghost.loadedMeshes[0].position =  new BABYLON.Vector3(camera.position.x + posx, 45, camera.position.z + posz);
+            }
+
+            // On click event, request pointer lock
+            scene.onPointerDown = function (evt) {
+                //true/false check if we're locked, faster than checking pointerlock on each single click.
+                if (!isLocked) {
+                    canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
+                    if (canvas.requestPointerLock) {
+                        canvas.requestPointerLock();
+                    }
+                }
+                // LEFT CLICK
+                if (isLocked && evt.buttons === 1) {
+                    if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
+                        // console.log('yes');
+                        // ghost.loadedMeshes[0].dispose();
+                        randomGhost(rPos(), rPos());
+                        score++;
+                    // }else{
+                        // console.log('no');
+                    }
+                }
+            };
+
+            // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
+            var pointerlockchange = function () {
+                var controlEnabled = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || document.msPointerLockElement || false;
+                
+                // If the user is already locked
+                if (!controlEnabled) {
+                    camera.detachControl(canvas);
+                    isLocked = false;
+                } else {
+                    camera.attachControl(canvas);
+                    isLocked = true;
+                }
+            };
+
+            // Attach events to the document
+            document.addEventListener("pointerlockchange", pointerlockchange, false);
+            document.addEventListener("mspointerlockchange", pointerlockchange, false);
+            document.addEventListener("mozpointerlockchange", pointerlockchange, false);
+            document.addEventListener("webkitpointerlockchange", pointerlockchange, false);
+            // END OF POINTER LOCK
+
+            // UI
+            var gameUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
+            gameUI.layer.layerMask = 1;
+            gameUI.rootContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            gameUI.rootContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+            gameUI.rootContainer.left = "-40%";
+            gameUI.rootContainer.top = "-45%";
+            // Score
+            var score_text = new BABYLON.GUI.TextBlock('Score');
+            score_text.color = "green";
+            score_text.fontSize = 32;
+            gameUI.addControl(score_text);
+            // Health
+            var health_text = new BABYLON.GUI.TextBlock('Health');
+            health_text.color = "green";
+            health_text.top = "5%";
+            health_text.fontSize = 32;
+            gameUI.addControl(health_text);  
+
+            // registerbeforerender        
+            scene.registerBeforeRender(function() {
+                // make map move with player
+                mm.position = camera.position;
+
+                // console.log(ghost.loadedMeshes[0].getDistanceToCamera(camera));
+                // follow ghost to player
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=20){
+                    ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-10, camera.position.z));
+                    ghost.loadedMeshes[0].movePOV(0, 0, -1);
+                }
+
+                // if player hit then relocate ghost
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <=15){
+                    randomGhost(rPos(), rPos());
+                    health -= 10;
+                }
+
+                if(health == 0){
+
+                }
+
+                // UI update
+                score_text.text = "Score : " + score;
+                health_text.text = "Health : " + health;
+                
+            })
+            assetsManager.onFinish = function(tasks) {
+                
+            };
+            assetsManager.load();
+
+            return scene;    
+        }
+
+        var scene = createScene();
+        engine.runRenderLoop(function() {
+            scene.render();
         });
 
-        // Make the sky
-        var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:10000.0}, scene);
-        var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
-        skyboxMaterial.backFaceCulling = false;
-        skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("skybox/skybox", scene);
-        skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-        skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
-        skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-        skybox.material = skyboxMaterial;
-                
-        var mainTexture = new BABYLON.Texture("sample.jpg", scene);
-        shaderMaterial.setTexture("textureSampler", mainTexture);
-
-        // Camera
-        var camera = new BABYLON.UniversalCamera("HumanCamera", new BABYLON.Vector3(0, 53, 0), scene);
-        // camera.rotation.y = Math.PI;
-        camera.radius = 30;
-        camera.speed = 3;
-        camera.attachControl(canvas);
-        camera.ellipsoid = new BABYLON.Vector3(4, 7, 4);
-
-        // Remap keys to move with WASD
-        camera.keysUp = [87]; // W
-        camera.keysDown = [83]; // S
-        camera.keysLeft = [65]; // A
-        camera.keysRight = [68]; // D
-
-        // Collision
-        scene.collisionsEnabled = true;
-        scene.gravity = new BABYLON.Vector3(0, -0.9, 0);
-        camera.checkCollisions = true;
-        camera.applyGravity = true;
-
-        // Light
-        var sunlight = new BABYLON.HemisphericLight("Sun", new BABYLON.Vector3(0, 100, 0), scene);
-        var light = new BABYLON.SpotLight("Flashlight", new BABYLON.Vector3(0, 5, -5), new BABYLON.Vector3(0, -0.15, 1), 10, 7, scene);
-        light.range = 175;
-        light.parent = camera;
-        sunlight.intensity = 0.15;
-
-        // // Minimap
-        
-        // var mm = new BABYLON.FreeCamera("minimap", new BABYLON.Vector3(0,100,0), scene);
-        // mm.setTarget(new BABYLON.Vector3(0.1,0.1,0.1));
-        // // Activate the orthographic projection
-        // mm.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-
-        // //These values are required for using an orthographic mode,
-        // // and represents the coordinates of the square containing all the camera view.
-        // // this.size is the size of our arena
-        // mm.orthoLeft = -this.size/2;
-        // mm.orthoRight = this.size/2;
-        // mm.orthoTop =  this.size/2;
-        // mm.orthoBottom = -this.size/2;
-
-        // mm.rotation.x = Math.PI/2;
-
-        // var xstart = 0.8, // 80% from the left
-        //     ystart = 0.75; // 75% from the bottom
-        // var width = 0.99-xstart, // Almost until the right edge of the screen
-        //     height = 1-ystart;  // Until the top edge of the screen
-
-        // mm.viewport = new BABYLON.Viewport(
-        //     xstart,
-        //     ystart,
-        //     width,
-        //     height
-        //     );
-
-        // // Add the camera to the list of active cameras of the game
-        // scene.activeCameras.push(mm);
-
-        // Random position
-        function rPos(){
-            return (Math.random() * 400) - 200;
-        }
-
-        for(var i = 0; i < 5; i++){
-            console.log(rPos());
-        };
-
-        // Assets
-        var assets = {};
-        var assetsManager = new BABYLON.AssetsManager(scene);
-        var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
-        var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/OBJ/", "FireAxe.obj");
-        var ghost = assetsManager.addMeshTask("ghost0", "", "ghost/", "nintendoghost.glb")
-        
-        // City
-        city.onSuccess = function (task) {
-            for (var i = 0; i < task.loadedMeshes.length; i++){
-                task.loadedMeshes[i].position = BABYLON.Vector3.Zero();
-                task.loadedMeshes[i].checkCollisions = true;
-                // task.loadedMeshes[i].PhysicsImpostor(BABYLON.PhysicsEngine.BoxImpostor, { mass: 0, friction: 0.5, restitution: 0.7 });
-            }
-        }
-
-        // Axe
-        axe.onSuccess = function (task) {
-            for (var i = 0; i < task.loadedMeshes.length; i++){
-                task.loadedMeshes[i].parent = camera;
-                task.loadedMeshes[i].position = new BABYLON.Vector3(-0.5, -9.5, 15);
-                task.loadedMeshes[i].rotation = new BABYLON.Vector3(-3.28, 0, -2.61);
-                task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.4, 0.4, 0.4); 
-                task.loadedMeshes[i].checkCollisions = true;
-            }
-        }
-        
-        ghost.onSuccess = function (task) {
-            var ran = rPos();
-            var ran2 = rPos();
-            
-            for (var i = 0; i < task.loadedMeshes.length; i++){
-                task.loadedMeshes[i].position = new BABYLON.Vector3(camera.position.x + ran, 45, camera.position.z + ran2);
-                task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-                // task.loadedMeshes[i].checkCollisions = true;
-            }
-        }
-
-        // action manager
-        scene.actionManager = new BABYLON.ActionManager(scene);
-
-        // Pointer LOCK
-        //We start without being locked.
-        var isLocked = false;
-        var score = 0;
-        // On click event, request pointer lock
-        scene.onPointerDown = function (evt) {
-            //true/false check if we're locked, faster than checking pointerlock on each single click.
-            if (!isLocked) {
-                canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
-                if (canvas.requestPointerLock) {
-                    canvas.requestPointerLock();
-                }
-            }
-            // LEFT CLICK
-            if (isLocked && evt.buttons === 1) {
-                if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
-                    // console.log('yes');
-                    // ghost.loadedMeshes[0].dispose();
-                    var ran3 = rPos();
-                    var ran4 = rPos();
-                    ghost.loadedMeshes[0].position =  new BABYLON.Vector3(camera.position.x + ran3, 45, camera.position.z + ran4);
-                    score++;
-                // }else{
-                    // console.log('no');
-                }
-            }
-        };
-
-        // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
-        var pointerlockchange = function () {
-            var controlEnabled = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || document.msPointerLockElement || false;
-            
-            // If the user is already locked
-            if (!controlEnabled) {
-                camera.detachControl(canvas);
-                isLocked = false;
-            } else {
-                camera.attachControl(canvas);
-                isLocked = true;
-            }
-        };
-
-        // Attach events to the document
-        document.addEventListener("pointerlockchange", pointerlockchange, false);
-        document.addEventListener("mspointerlockchange", pointerlockchange, false);
-        document.addEventListener("mozpointerlockchange", pointerlockchange, false);
-        document.addEventListener("webkitpointerlockchange", pointerlockchange, false);
-        // END OF POINTER LOCK
-
-        // UI
-        var gameUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
-
-        var score_text = new BABYLON.GUI.TextBlock('Score');
-        // score_text.text = "Score: " + score;
-        score_text.color = "green";
-        score_text.left = "-43%";
-        score_text.top = "-48%";
-        score_text.fontSize = 32;
-        gameUI.addControl(score_text);  
-
-        // registerbeforerender        
-        scene.registerBeforeRender(function() {
-            if(ghost.loadedMeshes[0].getDistanceToCamera() >=25){
-                ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-10, camera.position.z));
-                ghost.loadedMeshes[0].movePOV(0, 0, -1);
-            }
-            score_text.text = "Score: " + score;
-            // if(score % 5 == 0){
-            //     for(i;i <= 5;i++){
-            //         ghost.loadedMeshes[0].clone('ghost'+i);
-            //     }
-            // }                
-        })
-        assetsManager.onFinish = function(tasks) {
-            engine.runRenderLoop(function() {
-                scene.render();
-            });
-        };
-        assetsManager.load();
-        
+        // DEBUG MODE
         scene.debugLayer.show();
-
+        
         window.addEventListener("resize", function() {
             engine.resize();
         });

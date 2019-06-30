@@ -78,6 +78,9 @@
             // MENU
             var menuscene = new BABYLON.Scene(engine);
 
+            // MENU DEBUG MODE
+            // menuscene.debugLayer.show();
+
             var camera1 = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), menuscene);
             camera1.attachControl(canvas, true);
 
@@ -86,7 +89,13 @@
 
             // UI
             var menuUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("menuUI");
-            var play = BABYLON.GUI.Button.CreateSimpleButton("Play Button", "Play");
+            var title = new BABYLON.GUI.TextBlock("Axorcist");
+            title.text = "Axorcist";
+            title.color = "white";
+            title.fontSize = 72;
+            title.top = "-25%";
+    
+            var play = new BABYLON.GUI.Button.CreateSimpleButton("Play Button", "Play");
             play.width = 0.2;
             play.height = 0.1;
             play.color = "white";
@@ -99,6 +108,7 @@
                     scene.render();
                 })
             });
+            menuUI.addControl(title);
             menuUI.addControl(play);
 
             engine.runRenderLoop(function () {
@@ -152,7 +162,7 @@
 
             // Collision
             scene.collisionsEnabled = true;
-            scene.gravity = new BABYLON.Vector3(0, -2.981, 0);
+            scene.gravity = new BABYLON.Vector3(0, -2.9, 0);
             camera.checkCollisions = true;
             camera.applyGravity = true;
 
@@ -231,7 +241,7 @@
             axe.onSuccess = function (task) {
                 for (var i = 0; i < task.loadedMeshes.length; i++){
                     task.loadedMeshes[i].parent = camera;
-                    task.loadedMeshes[i].position = new BABYLON.Vector3(-0.5, -9.5, 15);
+                    task.loadedMeshes[i].position = new BABYLON.Vector3(1, -9.5, 15);
                     task.loadedMeshes[i].rotation = new BABYLON.Vector3(-3.28, 0, -2.61);
                     task.loadedMeshes[i].scaling = new BABYLON.Vector3(0.4, 0.4, 0.4); 
                     task.loadedMeshes[i].checkCollisions = true;
@@ -274,26 +284,31 @@
                 }
                 // LEFT CLICK
                 if (isLocked && evt.buttons === 1) {
-                    axe.loadedMeshes[0].rotate(BABYLON.Axis.Z, -1);
-                    axe.loadedMeshes[1].rotate(BABYLON.Axis.Z, -1);
-                    axe.loadedMeshes[2].rotate(BABYLON.Axis.Z, -1);
-                    if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
-                        randomGhost(rPos(), rPos());
-                        score++;
+                    // Animate front
+                    function goFront(){
+                        for(var i = 0; i<axe.loadedMeshes.length; i++){
+                            // axe.loadedMeshes[i].rotatePOV(-0.25, 1.4, -1);
+                            if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[0], true) || axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
+                                randomGhost(rPos(), rPos());
+                                score++;
+                            }
+                            axe.loadedMeshes[i].rotatePOV(-0.001, 0.0056, -0.004);
+                        }
                     }
-                    function goback(){
-                        if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
-                        randomGhost(rPos(), rPos());
-                        score++;
+                    for(var i = 250; i>0; i--){
+                        setTimeout(goFront, i);
                     }
-                        axe.loadedMeshes[0].rotate(BABYLON.Axis.Z, 0.25);
-                        axe.loadedMeshes[1].rotate(BABYLON.Axis.Z, 0.25);
-                        axe.loadedMeshes[2].rotate(BABYLON.Axis.Z, 0.25);
+                    
+                    // Animate back
+                    function goBack(){
+                        for(var i = 0; i<axe.loadedMeshes.length; i++){
+                            // axe.loadedMeshes[i].rotatePOV(-0.25, 1.4, -1);
+                            axe.loadedMeshes[i].rotatePOV(0.001, -0.0056, 0.004);
+                        }
                     }
-                    setTimeout(goback, 500);
-                    setTimeout(goback, 400);
-                    setTimeout(goback, 300);
-                    setTimeout(goback, 200);
+                    for(var i = 500; i>250; i--){
+                        setTimeout(goBack, i);
+                    }
                 }
             };
 
@@ -339,8 +354,9 @@
 
             // Checkpoint
             var cp_box = new BABYLON.MeshBuilder.CreateBox("CheckpointBox", {height: 10, width: 50, depth: 50}, scene);
+            cp_box.position = new BABYLON.Vector3(-101,50,-1005);
             cp_box.material = shaderMaterial;
-            moveCpBox();
+
             function moveCpBox() {
                 cp_box.position = new BABYLON.Vector3(-101,50,-1005);
             }
@@ -364,9 +380,12 @@
                 }
 
                 // follow ghost to player
-                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=10){
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) > 200){
+                    ghost.loadedMeshes[0].movePOV(0, 0, -2);
+                }
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=20){
                     ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-5, camera.position.z));
-                    ghost.loadedMeshes[0].movePOV(0, 0, -1.5);
+                    ghost.loadedMeshes[0].movePOV(0, 0, -1);
                 }
 
                 // if player hit then relocate ghost

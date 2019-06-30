@@ -267,7 +267,8 @@
             var isLocked = false;
             var score = 0;
             var health = 100;
-
+            var axe_swing = new BABYLON.Sound("AxeSwing", "axe.wav", scene);
+            var ouch = new BABYLON.Sound("Ouch", "ouch.wav", scene);
             function randomGhost(posx, posz){
                 ghost.loadedMeshes[0].position =  new BABYLON.Vector3(posx, 45, posz);
             }
@@ -284,6 +285,7 @@
                 }
                 // LEFT CLICK
                 if (isLocked && evt.buttons === 1) {
+                    axe_swing.play();
                     // Animate front
                     function goFront(){
                         for(var i = 0; i<axe.loadedMeshes.length; i++){
@@ -391,6 +393,7 @@
                 // if player hit then relocate ghost
                 if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <=10){
                     randomGhost(rPos(), rPos());
+                    ouch.play();
                     health -= 10;
                 }
 
@@ -424,7 +427,7 @@
         var scene = createScene();
 
         // DEBUG MODE
-        scene.debugLayer.show();
+        // scene.debugLayer.show();
         //-524,55,-36
         //-56,55,-1440
         
@@ -436,5 +439,3 @@
     </canvas>
 </body>
 </html>
-  
-  

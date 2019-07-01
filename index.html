@@ -262,6 +262,7 @@
             // Pointer LOCK
             //We start without being locked.
             var isLocked = false;
+            var pause = false;
             var score = -1000;
             var highscore = 0;
             var health = 100;
@@ -270,7 +271,8 @@
             function randomGhost(posx, posz){
                 ghost.loadedMeshes[0].position =  new BABYLON.Vector3(posx, 45, posz);
             }
-
+            
+            // INPUT
             // On click event, request pointer lock
             scene.onPointerDown = function (evt) {
                 //true/false check if we're locked, faster than checking pointerlock on each single click.
@@ -321,6 +323,25 @@
                     }
                 }
             });
+
+            // Pause Function
+            window.addEventListener("keydown", function (evt) {
+                // space key down
+                if (evt.keyCode === 80 || evt.keyCode === 27 && gamePlay) {
+                    if(!pause){
+                        pause_text.isVisible = true;
+                        pause = true;
+                        // engine.stopRenderLoop();
+                    } else {
+                        pause_text.isVisible = false;
+                        pause = false;
+                        engine.runRenderLoop(function(){
+                            scene.render();
+                        });
+                    }
+                }
+            });
+
             // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
             var pointerlockchange = function () {
                 var controlEnabled = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || document.msPointerLockElement || false;
@@ -370,6 +391,13 @@
             health_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             health_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(health_text);  
+            // Pause Text
+            var pause_text = new BABYLON.GUI.TextBlock('Pause');
+            pause_text.fontSize = 144;
+            pause_text.color = "white";
+            pause_text.text = "Paused";
+            gameUI.addControl(pause_text);
+            pause_text.isVisible = false;
 
             function updateHighscore() {
                 if(highscore < score){
@@ -425,6 +453,10 @@
             
             // registerbeforerender        
             scene.registerBeforeRender(function() {
+                if(pause){
+                    engine.stopRenderLoop();
+                }
+
                 // make map and player in map move with player
                 mm.position.x = camera.position.x;
                 mm.position.z = camera.position.z;

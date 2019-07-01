@@ -77,6 +77,10 @@
         var createScene = function() {
             // MENU
             var menuscene = new BABYLON.Scene(engine);
+            var gamePlay = false;
+
+            // MUSIC
+            var music = new BABYLON.Sound("Background", "bg.mp3", menuscene, null, { loop: true, autoplay: true });
 
             // MENU DEBUG MODE
             // menuscene.debugLayer.show();
@@ -104,6 +108,7 @@
             play.background = "red";
             play.onPointerUpObservable.add(function() {
                 engine.stopRenderLoop();
+                gamePlay = true;
                 engine.runRenderLoop(function () {
                     scene.render();
                 })
@@ -167,7 +172,7 @@
             camera.applyGravity = true;
 
             // Minimap
-            var mm = new BABYLON.FreeCamera("minimap", new BABYLON.Vector3(0,100,0), scene);
+            var mm = new BABYLON.FreeCamera("minimap", new BABYLON.Vector3(0,150,0), scene);
             mm.setTarget(new BABYLON.Vector3(0.1,0.1,0.1));
             // Activate the orthographic projection
             mm.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
@@ -193,6 +198,8 @@
                 width,
                 height
                 );
+
+            
 
             // Add the camera to the list of active cameras of the game
             scene.activeCameras.push(camera);
@@ -265,7 +272,8 @@
             // Pointer LOCK
             //We start without being locked.
             var isLocked = false;
-            var score = 0;
+            var score = -1000;
+            var highscore = 0;
             var health = 100;
             var axe_swing = new BABYLON.Sound("AxeSwing", "axe.wav", scene);
             var ouch = new BABYLON.Sound("Ouch", "ouch.wav", scene);
@@ -276,7 +284,8 @@
             // On click event, request pointer lock
             scene.onPointerDown = function (evt) {
                 //true/false check if we're locked, faster than checking pointerlock on each single click.
-                if (!isLocked) {
+                if (!isLocked && gamePlay) {
+                    
                         document.getElementById('crosshair').style.visibility = 'visible';
                     canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
                     if (canvas.requestPointerLock) {
@@ -284,7 +293,7 @@
                     }
                 }
                 // LEFT CLICK
-                if (isLocked && evt.buttons === 1) {
+                if (isLocked && evt.buttons === 1 && gamePlay) {
                     axe_swing.play();
                     // Animate front
                     function goFront(){
@@ -293,6 +302,7 @@
                             if(axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[0], true) || axe.loadedMeshes[0].intersectsMesh(ghost.loadedMeshes[1], true)){
                                 randomGhost(rPos(), rPos());
                                 score++;
+                                updateHighscore();
                             }
                             axe.loadedMeshes[i].rotatePOV(-0.001, 0.0056, -0.004);
                         }
@@ -314,6 +324,15 @@
                 }
             };
 
+            // JUMP
+            window.addEventListener("keydown", function (evt) {
+                // space key down
+                if (evt.keyCode === 32 && camera.position.y <= 60) {
+                    for(var i=1; i<4; i++){
+                        camera.position.y += i*2**i;
+                    }
+                }
+            });
             // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
             var pointerlockchange = function () {
                 var controlEnabled = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || document.msPointerLockElement || false;
@@ -347,27 +366,90 @@
             score_text.color = "green";
             score_text.fontSize = 32;
             gameUI.addControl(score_text);
+            // High score
+            var hscore_text = new BABYLON.GUI.TextBlock('Highscore');
+            hscore_text.color = "green";
+            hscore_text.top = "5%";
+            hscore_text.fontSize = 32;
+            gameUI.addControl(hscore_text);
             // Health
             var health_text = new BABYLON.GUI.TextBlock('Health');
             health_text.color = "green";
-            health_text.top = "5%";
+            health_text.top = "10%";
             health_text.fontSize = 32;
             gameUI.addControl(health_text);  
 
+            function updateHighscore() {
+                if(highscore < score){
+                    highscore = score;
+                }
+            }
             // Checkpoint
             var cp_box = new BABYLON.MeshBuilder.CreateBox("CheckpointBox", {height: 10, width: 50, depth: 50}, scene);
-            cp_box.position = new BABYLON.Vector3(-101,50,-1005);
+            // var Checkpoint_coor = [new BABYLON.Vector3(-101,50,-1005),new BABYLON.Vector3(),new BABYLON.Vector3(-56,55,-1440),new BABYLON.Vector3(-633,55,-175)];
+            // cp_box.position = new BABYLON.Vector3(-101,50,-1005);
             cp_box.material = shaderMaterial;
 
             function moveCpBox() {
-                cp_box.position = new BABYLON.Vector3(-101,50,-1005);
-            }
+                var ranPoint = Math.floor(Math.random()*4)
+                // console.log(ranPoint);
+                switch(ranPoint){
+                    case 0 :
+                        cp_box.position = new BABYLON.Vector3(-101,50,-1005);
+                        break;
+                    
+                    case 1 :
+                        cp_box.position = new BABYLON.Vector3(-524,50,-36);
+                        break;
+                    
+                    case 2 :
+                        cp_box.position = new BABYLON.Vector3(-633,50,-175);
+                        break;
 
+                    case 3 :
+                        cp_box.position = new BABYLON.Vector3(-56,50,-1440);
+                        break;
+                }
+            }
+            moveCpBox();
+
+            var redMat = new BABYLON.StandardMaterial("redMat", scene);
+	        redMat.emissiveColor = new BABYLON.Color3(1, 0, 0);
+
+            var greenMat = new BABYLON.StandardMaterial("greenMat", scene);
+	        greenMat.emissiveColor = new BABYLON.Color3(0, 1, 0);
+
+            var player_map = new BABYLON.MeshBuilder.CreateCylinder("cone", {diameterTop: 0, tessellation: 10}, scene);
+            player_map.material = greenMat;
+            player_map.position = new BABYLON.Vector3(-60,120,100);
+            player_map.scaling = new BABYLON.Vector3(50,50,50);
+            player_map.layerMask = 2;
+
+            var ghost_map = new BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2}, scene);
+            ghost_map.material = redMat;
+            ghost_map.position = new BABYLON.Vector3(-60,130,100);
+            ghost_map.scaling = new BABYLON.Vector3(20,20,20);
+            ghost_map.layerMask = 2;
+            
             // registerbeforerender        
             scene.registerBeforeRender(function() {
-                // make map move with player
+                // make map and player in map move with player
                 mm.position.x = camera.position.x;
                 mm.position.z = camera.position.z;
+                mm.rotation.z = - camera.rotation.y + Math.PI/4;
+
+                player_map.position.x = camera.position.x;
+                player_map.position.z = camera.position.z;
+                player_map.lookAt(cp_box.position);
+                player_map.rotation.y += Math.PI/2;
+                player_map.rotation.z = Math.PI/2;                
+
+                //make ghost show on minimap
+                ghost_map.position.x = ghost.loadedMeshes[0].position.x;
+                ghost_map.position.z = ghost.loadedMeshes[0].position.z;
+                // ghost_map.lookAt(camera.position);
+                // ghost_map.rotation.y += Math.PI/2;
+                // ghost_map.rotation.z = Math.PI/2; 
 
                 cp_box.rotation.y -= 0.01;
 
@@ -378,7 +460,8 @@
 
                 if(axe.loadedMeshes[0].intersectsMesh(cp_box, true)){
                     moveCpBox();
-                    score += 10;
+                    score += 1000;
+                    updateHighscore();
                 }
 
                 // follow ghost to player
@@ -399,6 +482,7 @@
 
                 if(health == 0 || camera.position.y <= 0){
                     alert("Game Over\nScore: "+score);
+                    gamePlay = false;
                     camera.position = new BABYLON.Vector3(0,53,0);
                     score = 0;
                     health = 100;
@@ -410,6 +494,7 @@
 
                 // UI update
                 score_text.text = "Score : " + score;
+                hscore_text.text = "Highscore : " + highscore;
                 health_text.text = "Health : " + health;
                 
             })
@@ -428,8 +513,6 @@
 
         // DEBUG MODE
         // scene.debugLayer.show();
-        //-524,55,-36
-        //-56,55,-1440
         
 
         window.addEventListener("resize", function() {

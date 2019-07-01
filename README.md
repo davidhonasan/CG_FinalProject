@@ -8,6 +8,7 @@ Team Members:
 - <a href="https://github.com/Frendy222/">Frendy Bodhi Susanto</a>  2101693883
 
 Gameplay Demo Video: https://www.youtube.com/watch?v=fkZDj8yStcg&feature=youtu.be
+
 Project Report: https://docs.google.com/document/d/1CWpOEdwTmR356bTwFXGKfDreL-CM1qFmpHBAZ2vaNAk
 
 JavaScript library used:

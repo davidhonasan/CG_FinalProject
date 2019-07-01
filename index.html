@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CG Final Project</title>
+    <title>Axorcist</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
@@ -55,20 +55,9 @@
         height: 100%;
         touch-action: none;
     }
-    #crosshair {
-        position:absolute;
-        top:50%;
-        left:50%;
-        margin-top:-37px;
-        margin-left:-37px;
-        width: 2%;
-        opacity: 0.4;
-        visibility: hidden;
-    }
     </style>
 </head>
 <body>
-    <img id="crosshair" src="crosshair.png"/>
     <canvas id="render" touch-action="none">
     <script>
         var canvas = document.getElementById("render");
@@ -109,6 +98,7 @@
             play.onPointerUpObservable.add(function() {
                 engine.stopRenderLoop();
                 gamePlay = true;
+                canvas.requestPointerLock();
                 engine.runRenderLoop(function () {
                     scene.render();
                 })
@@ -284,9 +274,7 @@
             // On click event, request pointer lock
             scene.onPointerDown = function (evt) {
                 //true/false check if we're locked, faster than checking pointerlock on each single click.
-                if (!isLocked && gamePlay) {
-                    
-                        document.getElementById('crosshair').style.visibility = 'visible';
+                if (!isLocked && gamePlay) {                  
                     canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock || false;
                     if (canvas.requestPointerLock) {
                         canvas.requestPointerLock();
@@ -356,27 +344,31 @@
 
             // UI
             var gameUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI");
+            gameUI.rootContainer.top = "2%";
+            gameUI.rootContainer.left = "2%";
             gameUI.layer.layerMask = 1;
-            gameUI.rootContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            gameUI.rootContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-            gameUI.rootContainer.left = "-40%";
-            gameUI.rootContainer.top = "-45%";
             // Score
             var score_text = new BABYLON.GUI.TextBlock('Score');
             score_text.color = "green";
             score_text.fontSize = 32;
+            score_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            score_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(score_text);
             // High score
             var hscore_text = new BABYLON.GUI.TextBlock('Highscore');
             hscore_text.color = "green";
             hscore_text.top = "5%";
             hscore_text.fontSize = 32;
+            hscore_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            hscore_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(hscore_text);
             // Health
             var health_text = new BABYLON.GUI.TextBlock('Health');
             health_text.color = "green";
             health_text.top = "10%";
             health_text.fontSize = 32;
+            health_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            health_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(health_text);  
 
             function updateHighscore() {
@@ -493,9 +485,9 @@
                 }
 
                 // UI update
-                score_text.text = "Score : " + score;
+                score_text.text = "Score        : " + score;
                 hscore_text.text = "Highscore : " + highscore;
-                health_text.text = "Health : " + health;
+                health_text.text = "Health       : " + health;
                 
             })
             assetsManager.onFinish = function(tasks) {

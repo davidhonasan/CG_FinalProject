@@ -110,12 +110,8 @@
                 menuscene.render();
             })
 
-
             // GAME
             var scene = new BABYLON.Scene(engine);
-            var gravityVector = new BABYLON.Vector3(0,-9.81, 0);
-            var physicsPlugin = new BABYLON.AmmoJSPlugin();
-            scene.enablePhysics(gravityVector, physicsPlugin);
 
             // Shader
             var shaderMaterial = new BABYLON.ShaderMaterial("shader", scene, {
@@ -215,7 +211,7 @@
             // Assets
             var assetsManager = new BABYLON.AssetsManager(scene);
             var city = assetsManager.addMeshTask("City", "", "city/", "city.obj");
-            var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/OBJ/", "FireAxe.obj");
+            var axe = assetsManager.addMeshTask("Axe", "", "fireaxe/", "FireAxe.obj");
             var ghost = assetsManager.addMeshTask("Ghost", "", "ghost/", "nintendoghost.glb")
             
             // City
@@ -255,17 +251,13 @@
                 }
             }
 
-            
-            // action manager
-            scene.actionManager = new BABYLON.ActionManager(scene);
-
-            // Pointer LOCK
-            //We start without being locked.
+            // Variables
             var isLocked = false;
             var pause = false;
             var score = -1000;
             var highscore = 0;
             var health = 100;
+            var time = 120;
             var axe_swing = new BABYLON.Sound("AxeSwing", "axe.wav", scene);
             var ouch = new BABYLON.Sound("Ouch", "ouch.wav", scene);
             function randomGhost(posx, posz){
@@ -273,6 +265,7 @@
             }
             
             // INPUT
+            // Pointer LOCK | We start without being locked.
             // On click event, request pointer lock
             scene.onPointerDown = function (evt) {
                 //true/false check if we're locked, faster than checking pointerlock on each single click.
@@ -368,6 +361,7 @@
             gameUI.rootContainer.top = "2%";
             gameUI.rootContainer.left = "2%";
             gameUI.layer.layerMask = 1;
+            
             // Score
             var score_text = new BABYLON.GUI.TextBlock('Score');
             score_text.color = "green";
@@ -375,6 +369,7 @@
             score_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             score_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(score_text);
+            
             // High score
             var hscore_text = new BABYLON.GUI.TextBlock('Highscore');
             hscore_text.color = "green";
@@ -383,6 +378,7 @@
             hscore_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             hscore_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(hscore_text);
+            
             // Health
             var health_text = new BABYLON.GUI.TextBlock('Health');
             health_text.color = "green";
@@ -391,6 +387,22 @@
             health_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             health_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
             gameUI.addControl(health_text);  
+
+            // Time Text
+            var time_text = new BABYLON.GUI.TextBlock('Time');
+            time_text.color = "green";
+            time_text.top = "15%";
+            time_text.fontSize = 32;
+            time_text.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            time_text.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+            gameUI.addControl(time_text);
+
+            window.setInterval(function() {
+                if(gamePlay && !pause){
+                    time--;
+                }
+            }, 1000);
+            
             // Pause Text
             var pause_text = new BABYLON.GUI.TextBlock('Pause');
             pause_text.fontSize = 144;
@@ -504,11 +516,12 @@
                     health -= 10;
                 }
 
-                if(health == 0 || camera.position.y <= 0){
+                if(health == 0 || camera.position.y <= 0 || time == 0){
                     alert("Game Over\nScore: "+score);
                     gamePlay = false;
                     camera.position = new BABYLON.Vector3(0,53,0);
                     score = 0;
+                    time = 120;
                     health = 100;
                     engine.stopRenderLoop();
                     engine.runRenderLoop(function(){
@@ -520,6 +533,7 @@
                 score_text.text = "Score        : " + score;
                 hscore_text.text = "Highscore : " + highscore;
                 health_text.text = "Health       : " + health;
+                time_text.text = "Time          : " + time + " s";
                 
             })
             assetsManager.onFinish = function(tasks) {

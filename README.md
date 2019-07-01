@@ -3,9 +3,9 @@
 Axorcist, an FPS game about exorcising ghosts with axe.
 
 Team Members:
-- Cindy Claresta Basrie 2101693845
-- David Honasan         2101693933
-- Frendy Bodhi Susanto  2101693883
+- <a href="https://github.com/cindyclarestabasrie/">Cindy Claresta Basrie</a> 2101693845
+- <a href="https://github.com/davidhonasan/">David Honasan</a>          2101693933
+- <a href="https://github.com/Frendy222/">Frendy Bodhi Susanto</a>  2101693883
 
 Gameplay Demo: https://www.youtube.com/watch?v=fkZDj8yStcg&feature=youtu.be
 

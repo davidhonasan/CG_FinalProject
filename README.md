@@ -10,6 +10,7 @@ Models used:
 City    : https://free3d.com/3d-model/the-city-39441.html
 Ghost   : https://free3d.com/3d-model/nintendo-ghost-79742.html
 Axe     : https://free3d.com/3d-model/blocky-fireaxe-77163.html
+Skybox  : https://doc.babylonjs.com/resources/playground_textures#cubetextures
 
 Sounds used:
 BGM           : https://incompetech.com/music/royalty-free/mp3-royaltyfree/Zombie%20Hoodoo.mp3

@@ -458,15 +458,15 @@
 
                 // follow ghost to player
                 if(ghost.loadedMeshes[0].getDistanceToCamera(camera) > 200){
-                    ghost.loadedMeshes[0].movePOV(0, 0, -2);
+                    ghost.loadedMeshes[0].movePOV(0, 0, -1.75);
                 }
-                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) >=20){
-                    ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-5, camera.position.z));
-                    ghost.loadedMeshes[0].movePOV(0, 0, -1);
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) > 5){
+                    ghost.loadedMeshes[0].lookAt(new BABYLON.Vector3(camera.position.x, camera.position.y-6, camera.position.z));
+                    ghost.loadedMeshes[0].movePOV(0, 0, -1.25);
                 }
 
                 // if player hit then relocate ghost
-                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <=10){
+                if(ghost.loadedMeshes[0].getDistanceToCamera(camera) <= 10){
                     randomGhost(rPos(), rPos());
                     ouch.play();
                     health -= 10;
